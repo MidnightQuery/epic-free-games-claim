@@ -44,7 +44,13 @@ export default defineContentScript({
                 };
                 gamesArr.push(newFreeGame);
             });
-            if (gamesArr.length === 0) return;
+			if (gamesArr.length === 0) {
+				await browser.runtime.sendMessage({
+					target: "background",
+					action: "noFreeGames",
+				});
+				return;
+			}
             await setStorageItem("steamGames", gamesArr);
             const freeGamesResponse: FreeGamesResponse = {
                 freeGames: gamesArr,
@@ -85,6 +91,13 @@ export default defineContentScript({
                     }
 
                     await incrementCounter();
+					
+					// CLAIM SUCCESS → tell background to close this tab
+					await browser.runtime.sendMessage({
+						target: "background",
+						action: "claimSuccess",
+					});
+					
                     break;
                 }
             }
