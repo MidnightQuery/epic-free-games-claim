@@ -46,18 +46,26 @@ export default defineContentScript({
                 };
                 gamesArr.push(newFreeGame);
             });
-            if (gamesArr.length > 0) {
-                const freeGamesResponse: FreeGamesResponse = {
-                    freeGames: gamesArr,
-                    loggedIn: isLoggedIn
-                }
-                await setStorageItem("epicGames", gamesArr);
-                await browser.runtime.sendMessage({
-                    target: 'background',
-                    action: 'claimFreeGames',
-                    data: freeGamesResponse
-                });
-            }
+			if (gamesArr.length > 0) {
+				const freeGamesResponse: FreeGamesResponse = {
+					freeGames: gamesArr,
+					loggedIn: isLoggedIn
+				};
+
+				await setStorageItem("epicGames", gamesArr);
+
+				await browser.runtime.sendMessage({
+					target: 'background',
+					action: 'claimFreeGames',
+					data: freeGamesResponse
+				});
+			} else {
+				// NO FREE GAMES → tell background to close this tab
+				await browser.runtime.sendMessage({
+					target: "background",
+					action: "noFreeGames",
+				});
+			}
         }
 
         async function claimCurrentFreeGame() {
