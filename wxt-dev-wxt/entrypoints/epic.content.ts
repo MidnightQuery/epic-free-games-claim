@@ -68,15 +68,28 @@ export default defineContentScript({
 			}
         }
 
-        async function claimCurrentFreeGame() {
-            await waitForPageLoad();
-            await wait(getRndInteger(100, 500));
-            await clickWhenVisible('[data-testid="purchase-cta-button"]');
-            await wait(getRndInteger(100, 500));
-            await clickWhenVisibleIframe('#webPurchaseContainer iframe', 'button.payment-btn.payment-order-confirm__btn');
-            await wait(getRndInteger(100, 500));
-            await clickWhenVisibleIframe('#webPurchaseContainer iframe', 'button.payment-confirm__btn.payment-btn--primary');
-            await incrementCounter();
-        }
+		async function claimCurrentFreeGame() {
+			await waitForPageLoad();
+			await wait(getRndInteger(100, 500));
+			await clickWhenVisible('[data-testid="purchase-cta-button"]');
+			await wait(getRndInteger(100, 500));
+			await clickWhenVisibleIframe(
+				'#webPurchaseContainer iframe',
+				'button.payment-btn.payment-order-confirm__btn'
+			);
+			await wait(getRndInteger(100, 500));
+			await clickWhenVisibleIframe(
+				'#webPurchaseContainer iframe',
+				'button.payment-confirm__btn.payment-btn--primary'
+			);
+
+			await incrementCounter();
+
+			// CLAIM SUCCESS → tell background to close this tab
+			await browser.runtime.sendMessage({
+				target: "background",
+				action: "claimSuccess",
+			});
+		}
     },
 });
