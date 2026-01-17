@@ -202,36 +202,57 @@ export default defineBackground({
       },
     });
   },
-
   async openTabAndSendActionToContent(url: string, action: string) {
-    const tab = await browser.tabs.create({ url });
-    if (!tab || !tab.id) return;
+    const tab = await browser.tabs.create({ url, active: false });
+    if (!tab?.id) return;
+
     await this.waitForTabToLoad(tab.id);
-    await browser.tabs.sendMessage(tab.id, { target: "content", action });
-  },
+
+    await browser.tabs.sendMessage(tab.id, {
+      target: "content",
+      action,
+    });
+  }
 
   async handleMessage(request: MessageRequest, sender?: browser.runtime.MessageSender) {
     if (request.target !== "background") return;
 
+    const tabId = sender?.tab?.id;
+
+    if (request.action === "noFreeGames" && tabId) {
+      await browser.tabs.remove(tabId);
+      return;
+    }
+
+    if (request.action === "claimSuccess" && tabId) {
+      await browser.tabs.remove(tabId);
+      return;
+    }
+
+    // existing logic below
     if (request.action === "claim") {
       await this.clearGamesList();
       await this.getFreeGamesList();
-    } else if (request.action === "claimFreeGames") {
+    } 
+    else if (request.action === "claimFreeGames") {
       if (request.data?.loggedIn === false) return;
       const games: FreeGame[] = request.data.freeGames;
       await this.claimGames(games);
-    } else if (request.action === "steamAddToCart") {
+    } 
+    else if (request.action === "steamAddToCart") {
       const appId = Number(request.data?.appId ?? request.data?.appid);
-      const tabId = sender?.tab?.id;
       if (tabId != null && Number.isFinite(appId)) {
         return this.steamAddToCart(tabId, appId);
-      } else {
-        console.warn("Missing tabId or appId", { tabId, appId, sender });
       }
-    } else if (request.action === "updateFrequency" || request.action === "updateActive") {
+    } 
+    else if (
+      request.action === "updateFrequency" ||
+      request.action === "updateActive"
+    ) {
       await this.initializeAlarms();
     }
-  },
+  }
+
 
   wait(ms: number) {
     return new Promise((r) => setTimeout(r, ms));
