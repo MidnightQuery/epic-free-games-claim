@@ -30,7 +30,7 @@ export async function waitForAllElements(document: Document, selector: string, t
     let visible = false;
     while (retry < maxRetry) {
             el = document.querySelectorAll(selector) as NodeListOf<HTMLElement>;
-            visible = Array.from(el).every(e => isVisible(e));
+            visible = Array.from(el).every((e: HTMLElement) => isVisible(e));
         if (el && visible) {
             return el;
         }
