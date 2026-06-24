@@ -141,25 +141,36 @@ export default defineBackground({
   },
 
   async getFreeGamesList() {
-    const { steamCheck, epicCheck } = await getStorageItems(["steamCheck", "epicCheck"]);
+    const { steamCheck, epicCheck, gogCheck } = await getStorageItems(["steamCheck", "epicCheck", "gogCheck"]);
+    const isSteamChecked = steamCheck !== false;
+    const isEpicChecked = epicCheck !== false;
+    const isGogChecked = gogCheck !== false;
+
     try {
-      await this.getEpicGamesList(epicCheck);
+      await this.getEpicGamesList(isEpicChecked);
     } catch (e) {
       console.error("getEpicGamesList failed:", e);
-      if (epicCheck) await this.openTabAndSendActionToContent(EPIC_GAMES_URL, "getFreeGames");
+      if (isEpicChecked) await this.openTabAndSendActionToContent(EPIC_GAMES_URL, "getFreeGames");
     }
     try {
-      await this.getSteamGamesList(steamCheck);
+      await this.getSteamGamesList(isSteamChecked);
     } catch (e) {
       console.error("openTabAndSendActionToContent failed:", e);
-      if (steamCheck) await this.openTabAndSendActionToContent(STEAM_GAMES_URL, "getFreeGames");
+      if (isSteamChecked) await this.openTabAndSendActionToContent(STEAM_GAMES_URL, "getFreeGames");
+    }
+    try {
+      await this.getGogGamesList(isGogChecked);
+    } catch (e) {
+      console.error("getGogGamesList failed:", e);
+      if (isGogChecked) await this.openTabAndSendActionToContent("https://www.gog.com/en", "getFreeGames");
     }
   },
 
   async claimGames(games: FreeGame[]) {
     void this.setBadgeText(games.length.toString());
     for (const game of games) {
-      await this.openTabAndSendActionToContent(game.link, "claimGames");
+      const claimUrl = game.platform === Platforms.GOG ? "https://www.gog.com/giveaway/claim" : game.link;
+      await this.openTabAndSendActionToContent(claimUrl, "claimGames");
       await this.wait(10_000);
     }
   },
@@ -388,10 +399,53 @@ export default defineBackground({
     await setStorageItem('steamGames', newGames);
   },
 
+  async getGogGamesList(shouldClaim: boolean = true) {
+    const html = await fetch("https://www.gog.com/en").then(r => r.text());
+    const root = parse(html);
+    const banner = root.querySelector('#giveaway');
+    if (!banner) return;
+
+    const header = banner.querySelector('.giveaway__content-header');
+    if (!header) return;
+
+    const text = header.text.trim();
+    const match_all = text.match(/Claim (.*) and don't miss the|Success! (.*) was added to/i);
+    if (!match_all) return;
+
+    const title = match_all[1] ? match_all[1].trim() : match_all[2].trim();
+    const anchor = banner.querySelector('a');
+    const href = anchor ? anchor.getAttribute('href') : '';
+    const resolveUrl = (u: string) =>
+        u ? new URL(u, 'https://www.gog.com').toString() : '';
+
+    const link = href ? resolveUrl(href) : 'https://www.gog.com/giveaway/claim';
+    const imgEl = banner.querySelector('img');
+    const imgRaw = imgEl ? (imgEl.getAttribute('src') || imgEl.getAttribute('data-src') || '') : '';
+
+    const game: FreeGame = {
+      title,
+      platform: Platforms.GOG,
+      link: resolveUrl(link),
+      img: imgRaw ? resolveUrl(imgRaw) : '/icon/128.png',
+      startDate: new Date().toISOString(),
+    };
+
+    const currFreeGames: FreeGame[] = await getStorageItem("gogGames") || [];
+    const newGames = [game].filter((g) =>
+        !currFreeGames.some((cg) => cg?.title === g?.title)
+    );
+
+    if (newGames.length > 0) {
+      await setStorageItem("gogGames", [game]);
+      if (shouldClaim) this.claimGames(newGames);
+    }
+  },
+
   async clearGamesList() {
     await setStorageItem("epicGames", []);
     await setStorageItem("futureGames", []);
     await setStorageItem("steamGames", []);
+    await setStorageItem("gogGames", []);
   },
 
   async setBadgeText(text: string) {

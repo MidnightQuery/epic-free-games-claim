@@ -11,6 +11,7 @@ function Settings() {
     const [counter] = useStorage<number>("counter", 0);
     const [steamCheck, setSteamCheck] = useStorage<boolean>("steamCheck", true);
     const [epicCheck, setEpicCheck] = useStorage<boolean>("epicCheck", true);
+    const [gogCheck, setGogCheck] = useStorage<boolean>("gogCheck", true);
     const [claimFrequency, setClaimFrequency] = useStorage<ClaimFrequency>("claimFrequency", ClaimFrequency.DAILY);
 
     function handleFrequencyChange(frequency: ClaimFrequency) {
@@ -30,13 +31,14 @@ function Settings() {
 
             <div className="inputs">
                 <ManualClaimBtn/>
-                <span>Log in on <a href="https://store.steampowered.com/login/" target="_blank">Steam</a> and <a
+                <span>Log in on <a href="https://store.steampowered.com/login/" target="_blank">Steam</a>, <a
                     href="https://www.epicgames.com/id/login"
-                    target="_blank">Epic games</a> to get free games</span>
+                    target="_blank">Epic games</a> and <a href="https://www.gog.com/en" target="_blank">GOG</a> to get free games</span>
                 <FrequencySelect value={claimFrequency} onChange={handleFrequencyChange} />
                 <div className="checkboxes">
                     <Checkbox name="Steam" checked={steamCheck} onChange={e => setSteamCheck(e.target.checked)}/>
                     <Checkbox checked={epicCheck} onChange={e => setEpicCheck(e.target.checked)} name="Epic Games"/>
+                    <Checkbox checked={gogCheck} onChange={e => setGogCheck(e.target.checked)} name="GOG"/>
                 </div>
             </div>
             <span>Free games are automatically claimed based on your selected frequency</span>
